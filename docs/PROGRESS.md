@@ -19,6 +19,9 @@
 - [x] **P1-SEC-005 to 008**: Fixed injection risks, added file whitelists, and pinned dependencies.
 - [x] **P2-SEC-009 to 012**: Secured temp files, disabled production source maps, and added rate limiting.
 - [x] **P3-SEC-013 to 014**: Documented security model and added input sanitization.
+- [x] **UX-001**: Implemented automated 'Zero-Install' setup via `npx` and `npm run setup`.
+- [x] **UX-002**: Implemented automated 'Uninstall' functionality to revert system changes.
+- [x] **UX-003**: Added binary wrapper in `bin/` for seamless `npx` fallback to source.
 
 ### Key Findings (Post-Remediation)
 
@@ -40,8 +43,9 @@
 ### Next Steps
 
 1. 🟢 All critical and high-priority fixes applied.
-2. Monitor system logs for blocked security violations.
-3. Schedule next periodic security review (2026-06-04).
+2. 🚀 Automated setup and uninstall scripts verified and documented.
+3. Monitor system logs for blocked security violations.
+4. Schedule next periodic security review (2026-06-04).
 
 ### Notes
 

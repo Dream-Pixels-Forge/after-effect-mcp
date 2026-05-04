@@ -14,6 +14,8 @@
 |---------|------|--------|----------|---------|-------|
 | SEC-013 | Document security model and trust assumptions | ✅ Completed | Low | - | CVE-011 (In README) |
 | SEC-014 | Add input sanitization for tool parameters | ✅ Completed | Low | - | CVE-014 (ae_create_comp etc) |
+| UX-001  | Implement automated 'Zero-Install' setup | ✅ Completed | High | - | Simplified installation |
+| UX-002  | Implement automated 'Uninstall' tool | ✅ Completed | High | - | Reversibility |
 | SEC-015 | Set up automated vulnerability monitoring | Pending | Low | - | Dependabot/Snyk |
 | SEC-016 | Add audit logging for all operations | Pending | Low | - | Traceability |
 
