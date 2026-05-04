@@ -974,6 +974,19 @@ async function main() {
     }
   }
 
+  // Support 'npx after-effect-mcp uninstall'
+  if (process.argv.includes("uninstall")) {
+    console.log("🗑️ Starting After Effects MCP Uninstall...");
+    try {
+      const { runUninstall } = await import("./setup-helper.js");
+      await runUninstall();
+      return;
+    } catch (e) {
+      console.error("❌ Uninstall failed:", e);
+      process.exit(1);
+    }
+  }
+
   // Security: Validate auth token if configured (CVE-011 fix)
   if (MCP_AUTH_TOKEN) {
     const providedToken = process.env.MCP_CLIENT_TOKEN;

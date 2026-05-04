@@ -52,6 +52,22 @@ If you prefer to set up manually:
 2. **Copy ScriptUI Panels**: Move `mcp-connection-panel.jsx` or `mcp-http-bridge.jsx` to your After Effects `Scripts/ScriptUI Panels` folder.
 3. **Configure MCP Client**: Follow the instructions in [Connecting to MCP Clients](#connecting-to-mcp-clients).
 
+## 🗑️ Uninstalling
+
+If you need to remove the MCP server and its components:
+
+### Automated Uninstall
+```powershell
+npx after-effect-mcp uninstall
+# OR if you have the repo:
+npm run uninstall
+```
+
+### Manual Uninstall
+1. **Remove Panels**: Delete `mcp-connection-panel.jsx` and `mcp-http-bridge.jsx` from your AE `Scripts/ScriptUI Panels` folder.
+2. **Clean Config**: Remove the `after-effects` entry from your `claude_desktop_config.json`.
+3. **Delete Project**: Delete the `after-effect-mcp` directory.
+
 ## 🔌 Connecting to MCP Clients
 
 ### Claude Desktop

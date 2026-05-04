@@ -111,3 +111,83 @@ export async function runSetup() {
   console.log("\n🎉 Setup complete! Restart After Effects and Claude Desktop to begin.");
   console.log("👉 Don't forget to enable 'Allow Scripts to Write Files and Access Network' in AE Preferences.");
 }
+
+/**
+ * Reverts changes made by runSetup.
+ */
+export async function runUninstall() {
+  const currentFile = fileURLToPath(import.meta.url);
+  const projectRoot = resolve(dirname(dirname(currentFile)));
+  const panels = ["mcp-connection-panel.jsx", "mcp-http-bridge.jsx"];
+
+  function findAfterEffectsSupportDir() {
+    if (process.platform === "win32") {
+      const roots = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"]].filter(Boolean) as string[];
+      for (const root of roots) {
+        const adobeRoot = join(root, "Adobe");
+        if (!existsSync(adobeRoot)) continue;
+        for (const entry of readdirSync(adobeRoot, { withFileTypes: true })) {
+          if (!entry.isDirectory() || !entry.name.startsWith("Adobe After Effects")) continue;
+          const supportDir = join(adobeRoot, entry.name, "Support Files");
+          if (existsSync(supportDir)) return supportDir;
+        }
+      }
+    }
+    if (process.platform === "darwin") {
+      const appRoot = "/Applications";
+      if (existsSync(appRoot)) {
+        for (const entry of readdirSync(appRoot, { withFileTypes: true })) {
+          if (!entry.isDirectory() || !entry.name.startsWith("Adobe After Effects")) continue;
+          return join(appRoot, entry.name);
+        }
+      }
+    }
+    return null;
+  }
+
+  function getClaudeConfigPath() {
+    if (process.platform === "win32") {
+      return join(process.env.APPDATA || "", "Claude", "claude_desktop_config.json");
+    }
+    if (process.platform === "darwin") {
+      return join(os.homedir(), "Library", "Application Support", "Claude", "claude_desktop_config.json");
+    }
+    return null;
+  }
+
+  console.log("🗑️ Starting After Effects MCP Uninstall...");
+
+  // 1. Remove Panels
+  const aeSupportDir = findAfterEffectsSupportDir();
+  if (aeSupportDir) {
+    const scriptUiDir = join(aeSupportDir, "Scripts", "ScriptUI Panels");
+    for (const panel of panels) {
+      const dest = join(scriptUiDir, panel);
+      if (existsSync(dest)) {
+        try {
+          import("node:fs").then(fs => fs.unlinkSync(dest));
+          console.log(`✅ Removed ${panel} from AE ScriptUI Panels.`);
+        } catch (e) {
+          console.warn(`⚠️ Could not remove ${panel} from AE.`);
+        }
+      }
+    }
+  }
+
+  // 2. Remove from Claude Config
+  const claudePath = getClaudeConfigPath();
+  if (claudePath && existsSync(claudePath)) {
+    try {
+      const config = JSON.parse(readFileSync(claudePath, "utf8"));
+      if (config.mcpServers && config.mcpServers["after-effects"]) {
+        delete config.mcpServers["after-effects"];
+        writeFileSync(claudePath, JSON.stringify(config, null, 2), "utf8");
+        console.log(`✅ Removed 'after-effects' from Claude Desktop configuration.`);
+      }
+    } catch (e) {
+      console.error(`⚠️ Could not update Claude config at ${claudePath}.`);
+    }
+  }
+
+  console.log("\n✨ Uninstall complete. You can now safely delete the project folder.");
+}
