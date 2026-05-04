@@ -24,6 +24,7 @@
     "build",
     "examples",
     "scripts",
+    "src",
     "LICENSE",
     "README.md"
   ],
