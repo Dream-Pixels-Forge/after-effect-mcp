@@ -44,6 +44,7 @@ npm run setup
 ```
 
 This script will:
+
 1. Build the MCP server.
 2. Detect your After Effects installation and copy the ScriptUI panels.
 3. Update your `claude_desktop_config.json` with the correct paths.
@@ -65,6 +66,7 @@ If you prefer to set up manually:
 If you need to remove the MCP server and its components:
 
 ### Automated Uninstall
+
 ```powershell
 npx after-effect-mcp uninstall
 # OR if you have the repo:
@@ -72,6 +74,7 @@ npm run uninstall
 ```
 
 ### Manual Uninstall
+
 1. **Remove Panels**: Delete `mcp-connection-panel.jsx` and `mcp-http-bridge.jsx` from your AE `Scripts/ScriptUI Panels` folder.
 2. **Clean Config**: Remove the `after-effects` entry from your `claude_desktop_config.json`.
 3. **Delete Project**: Delete the `after-effect-mcp` directory.
@@ -79,6 +82,7 @@ npm run uninstall
 ## 🔌 Connecting to MCP Clients
 
 ### Claude Desktop
+
 Add this to your `claude_desktop_config.json` (found in `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
@@ -96,6 +100,7 @@ Add this to your `claude_desktop_config.json` (found in `%APPDATA%\Claude\claude
 ```
 
 ### VSCode (Cline / Roo Code)
+
 If you are using MCP-enabled extensions like **Cline** or **Roo Code**, add the configuration to their respective settings (usually `cline_mcp_settings.json`):
 
 ```json
@@ -113,6 +118,7 @@ If you are using MCP-enabled extensions like **Cline** or **Roo Code**, add the 
 ```
 
 ### OpenCode & Codex
+
 The easiest way is to use the included installer:
 
 ```powershell
@@ -129,10 +135,10 @@ This will generate an `opencode.jsonc` file. For manual setup in **Codex**, use:
       "command": ["node", "<absolute path to after-effect-mcp>/build/index.js"],
       "enabled": true,
       "environment": {
-        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>"
-      }
-    }
-  }
+        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>",
+      },
+    },
+  },
 }
 ```
 
@@ -177,13 +183,13 @@ Use ES3 ExtendScript syntax. After Effects ExtendScript does not support modern 
 if (!app.project) app.newProject();
 app.beginUndoGroup("MCP Example");
 try {
-    var comp = app.project.items.addComp("MCP Test", 1920, 1080, 1, 5, 30);
-    var text = comp.layers.addText("Hello from MCP");
-    text.property("Transform").property("Position").setValue([960, 540]);
-    comp.openInViewer();
-    return { comp: comp.name, layer: text.name };
+  var comp = app.project.items.addComp("MCP Test", 1920, 1080, 1, 5, 30);
+  var text = comp.layers.addText("Hello from MCP");
+  text.property("Transform").property("Position").setValue([960, 540]);
+  comp.openInViewer();
+  return { comp: comp.name, layer: text.name };
 } finally {
-    app.endUndoGroup();
+  app.endUndoGroup();
 }
 ```
 
@@ -232,15 +238,16 @@ This MCP server executes Adobe ExtendScript code in After Effects. Key security 
 
 ### Environment Variables
 
-| Variable | Purpose | Default | Security |
-|----------|---------|---------|----------|
-| `AFTERFX_PATH` | Explicit After Effects executable path | Auto-detect | Validated |
-| `AFTER_EFFECTS_PATH` | Alternative path variable | Auto-detect | Validated |
-| `MCP_ALLOWED_DIRS` | Semicolon-separated allowed directories for file ops | Current directory | **Required for security** |
+| Variable             | Purpose                                              | Default           | Security                  |
+| -------------------- | ---------------------------------------------------- | ----------------- | ------------------------- |
+| `AFTERFX_PATH`       | Explicit After Effects executable path               | Auto-detect       | Validated                 |
+| `AFTER_EFFECTS_PATH` | Alternative path variable                            | Auto-detect       | Validated                 |
+| `MCP_ALLOWED_DIRS`   | Semicolon-separated allowed directories for file ops | Current directory | **Required for security** |
 
 ### Security Audit
 
 A comprehensive security audit and remediation was completed on 2026-05-04:
+
 - **15 vulnerabilities fixed** (5 Critical, 5 High, 5 Medium)
 - **Zero critical or high-risk vulnerabilities remaining**
 - **Improved ExtendScript Sandbox**: Blocks bracket-notation bypasses and dangerous file/system operations.
@@ -253,8 +260,8 @@ See `docs/SECURITY.md` for full audit details and remediation history.
 To use the MCP interface directly inside After Effects:
 
 1.  **Copy the Panels**: Move `mcp-connection-panel.jsx` or `mcp-http-bridge.jsx` to your After Effects `Scripts/ScriptUI Panels` folder.
-    *   **Windows**: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
-    *   **macOS**: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
+    - **Windows**: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
+    - **macOS**: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
 2.  **Enable Network Access**: In AE, go to `Preferences > Scripting & Expressions` and check **"Allow Scripts to Write Files and Access Network"**.
 3.  **Launch the Panel**: Restart After Effects and find the panel under the **Window** menu.
 
