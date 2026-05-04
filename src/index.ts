@@ -87,14 +87,23 @@ function validateExtendScriptSecurity(code: string): { valid: boolean; reason?: 
   return { valid: true };
 }
 
+// Security: Sanitize user input strings (CVE-014 fix)
+function sanitizeInput(input: string, maxLength: number = 1000): string {
+  // Truncate to max length
+  let sanitized = input.substring(0, maxLength);
+  // Remove null bytes and other control characters except newlines/tabs
+  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  return sanitized;
+}
+
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 type AeRunResult = {
   ok: boolean;
   value?: JsonValue;
   error?: string;
-  scriptPath: string;
-  resultPath: string;
+  scriptPath?: string;
+  resultPath?: string;
   exitCode: number | null;
   timedOut: boolean;
   stderr: string;
@@ -424,7 +433,10 @@ server.registerTool(
       return textResponse(`Security error: ${validation.reason}`, { ok: false, error: validation.reason });
     }
 
-    const result = await runAfterEffectsScript({ code, executablePath, timeoutMs, keepTempFiles });
+    // Security: Sanitize input (CVE-014 fix)
+    const sanitizedCode = sanitizeInput(code, 10000);
+
+    const result = await runAfterEffectsScript({ code: sanitizedCode, executablePath, timeoutMs, keepTempFiles });
     const text = result.ok
       ? `After Effects script completed.\n\n${prettyJson(result.value ?? null)}`
       : `After Effects script failed: ${result.error}\n\nstderr:\n${result.stderr || "(empty)"}`;
@@ -597,12 +609,16 @@ server.registerTool(
     },
   },
   async ({ text, compName, x, y, fontSize, color, startTime, duration, executablePath, timeoutMs }) => {
-    const compSelector = compName
+    // Security: Sanitize inputs (CVE-014 fix)
+    const sanitizedText = sanitizeInput(text, 1000);
+    const sanitizedCompName = compName ? sanitizeInput(compName, 200) : undefined;
+
+    const compSelector = sanitizedCompName
       ? `
 var comp = null;
 for (var i = 1; i <= app.project.items.length; i++) {
     var item = app.project.item(i);
-    if (item instanceof CompItem && item.name === "${escapeForJsString(compName)}") {
+    if (item instanceof CompItem && item.name === "${escapeForJsString(sanitizedCompName ?? "")}") {
         comp = item;
         break;
     }
@@ -655,12 +671,16 @@ server.registerTool(
     },
   },
   async ({ name, compName, color, width, height, duration, executablePath, timeoutMs }) => {
-    const compSelector = compName
+    // Security: Sanitize inputs (CVE-014 fix)
+    const sanitizedName = sanitizeInput(name, 200);
+    const sanitizedCompName = compName ? sanitizeInput(compName, 200) : undefined;
+
+    const compSelector = sanitizedCompName
       ? `
 var comp = null;
 for (var i = 1; i <= app.project.items.length; i++) {
     var item = app.project.item(i);
-    if (item instanceof CompItem && item.name === "${escapeForJsString(compName)}") {
+    if (item instanceof CompItem && item.name === "${escapeForJsString(sanitizedCompName ?? "")}") {
         comp = item;
         break;
     }
@@ -811,6 +831,8 @@ server.registerTool(
     },
   },
   async ({ compName, outputPath, renderSettingsTemplate, outputModuleTemplate, executablePath, timeoutMs }) => {
+    // Security: Sanitize inputs (CVE-014 fix)
+    const sanitizedCompName = compName ? sanitizeInput(compName, 200) : undefined;
     const outputLine = outputPath ? `om.file = new File("${escapeForJsString(normalize(outputPath))}");` : "";
     const renderSettingsLine = renderSettingsTemplate ? `rqItem.applyTemplate("${escapeForJsString(renderSettingsTemplate)}");` : "";
     const outputTemplateLine = outputModuleTemplate ? `om.applyTemplate("${escapeForJsString(outputModuleTemplate)}");` : "";
@@ -819,12 +841,12 @@ if (!app.project) throw new Error("No After Effects project is open.");
 var comp = null;
 for (var i = 1; i <= app.project.items.length; i++) {
     var item = app.project.item(i);
-    if (item instanceof CompItem && item.name === "${escapeForJsString(compName)}") {
+    if (item instanceof CompItem && item.name === "${escapeForJsString(sanitizedCompName ?? "")}") {
         comp = item;
         break;
     }
 }
-if (!(comp instanceof CompItem)) throw new Error("Composition not found: ${escapeForJsString(compName)}");
+if (!(comp instanceof CompItem)) throw new Error("Composition not found: ${escapeForJsString(sanitizedCompName ?? "")}");
 app.beginUndoGroup("MCP Queue Render");
 try {
     var rqItem = app.project.renderQueue.items.add(comp);
@@ -875,7 +897,7 @@ return $.evalFile(scriptFile);`;
 );
 
 // Security: Validate AE executable path (CVE-004 fix)
-function validateAfterEffectsExecutable(executablePath: string): { valid: boolean; reason?: string } {
+function validateAfterEffectsExecutable(executablePath: string): { valid: boolean; reason?: string; normalized?: string } {
   const normalized = normalize(resolve(executablePath));
 
   // Check for path traversal
