@@ -12,6 +12,9 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_MAX = 100; // Max requests per window
 const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
 
+// Security: Optional auth token for stdio transport (CVE-011 fix)
+const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
+
 function checkRateLimit(identifier: string): { allowed: boolean; retryAfter?: number } {
   const now = Date.now();
   const record = requestCounts.get(identifier);
@@ -921,6 +924,15 @@ function validateAfterEffectsExecutable(executablePath: string): { valid: boolea
 }
 
 async function main() {
+  // Security: Validate auth token if configured (CVE-011 fix)
+  if (MCP_AUTH_TOKEN) {
+    const providedToken = process.env.MCP_CLIENT_TOKEN;
+    if (!providedToken || providedToken !== MCP_AUTH_TOKEN) {
+      console.error("Authentication failed: Invalid or missing MCP_CLIENT_TOKEN");
+      process.exit(1);
+    }
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
