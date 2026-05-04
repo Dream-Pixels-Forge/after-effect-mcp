@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, normalize, resolve, sep } from "node:path";
@@ -140,7 +140,6 @@ function findAfterEffectsExecutable(explicitPath?: string): string {
   // Check for running AfterFX process (Windows)
   if (process.platform === "win32") {
     try {
-      const { execSync } = require("node:child_process");
       const ps = execSync(
         'powershell -Command "Get-Process -Name afterfx -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path"',
         { encoding: "utf8", timeout: 5000 }
@@ -154,14 +153,18 @@ function findAfterEffectsExecutable(explicitPath?: string): string {
   }
 
   if (process.platform === "win32") {
-    const programFiles = [
-      process.env.ProgramFiles,
-      process.env["ProgramFiles(x86)"],
-    ].filter(Boolean) as string[];
+    // Scan all drives for After Effects (not just ProgramFiles)
+    const drives = ["C:", "D:", "E:", "F:"].filter((d) => {
+      try {
+        return existsSync(d);
+      } catch {
+        return false;
+      }
+    });
 
     const candidates: string[] = [];
-    for (const root of programFiles) {
-      const adobeRoot = join(root, "Adobe");
+    for (const drive of drives) {
+      const adobeRoot = join(drive, "\\Program Files", "Adobe");
       if (!existsSync(adobeRoot)) {
         continue;
       }
@@ -218,13 +221,10 @@ function makeWrapper(userCode: string, resultPath: string): string {
     throw new Error(`Invalid ExtendScript code: ${validation.reason}`);
   }
 
-  // Security: Escape user code to prevent injection into wrapper
+  // Convert newlines to actual newlines for JSX embedding
   const escapedUserCode = userCode
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r")
-    .replace(/\$/g, "\\$");
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
 
   return `#target aftereffects
 (function afterEffectMcpWrapper() {
@@ -278,7 +278,7 @@ function makeWrapper(userCode: string, resultPath: string): string {
     app.beginSuppressDialogs();
     try {
         var __mcpResult = (function () {
-${escapedUserCode.split("\\n").map((line) => `            ${line}`).join("\\n")}
+${escapedUserCode.split("\n").map((line) => `            ${line}`).join("\n")}
         })();
         writeResult({ ok: true, value: __mcpResult });
         app.exitCode = 0;
