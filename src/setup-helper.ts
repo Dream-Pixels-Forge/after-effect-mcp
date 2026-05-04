@@ -99,7 +99,12 @@ export async function runSetup() {
       type: "mcpServers"
     },
     {
-      name: "OpenCode/Codex",
+      name: "OpenCode Global",
+      path: join(os.homedir(), ".config", "opencode", "opencode.json"),
+      type: "mcp"
+    },
+    {
+      name: "OpenCode Local",
       path: join(process.cwd(), "opencode.jsonc"),
       type: "mcp"
     }
@@ -111,8 +116,8 @@ export async function runSetup() {
     const configPath = configInfo.path;
     if (!configPath) continue;
 
-    // For OpenCode, we always create it if it doesn't exist but we are in a project
-    const shouldCreate = configInfo.name === "OpenCode/Codex";
+    // For OpenCode Global, we always create it if it doesn't exist
+    const shouldCreate = configInfo.name === "OpenCode Global";
     
     if (existsSync(configPath) || shouldCreate) {
       if (!existsSync(dirname(configPath))) {
@@ -274,7 +279,12 @@ export async function runUninstall() {
       type: "mcpServers"
     },
     {
-      name: "OpenCode/Codex",
+      name: "OpenCode Global",
+      path: join(os.homedir(), ".config", "opencode", "opencode.json"),
+      type: "mcp"
+    },
+    {
+      name: "OpenCode Local",
       path: join(process.cwd(), "opencode.jsonc"),
       type: "mcp"
     }
