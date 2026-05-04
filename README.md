@@ -16,58 +16,97 @@ The server runs over MCP stdio, launches `afterfx.com` or `AfterFX.exe` with a t
   `Edit > Preferences > Scripting & Expressions > Allow Scripts To Write Files And Access Network`.
 - For live automation, keep After Effects open before calling MCP tools.
 
-The server tries to auto-detect After Effects. If auto-detection does not find it, set `AFTERFX_PATH` to your local `AfterFX.com` or `AfterFX.exe` path.
+## 🚀 Zero-Install Setup (npx)
 
-## Install
+If you have Node.js installed, you can set up everything with one command without even cloning the repository:
 
-From this project folder:
+```powershell
+npx -y after-effect-mcp setup
+```
+
+This will automatically build the server, install After Effects panels, and configure your MCP clients.
+
+## 📦 Local Setup (Recommended for Developers)
+
+If you have cloned the repository:
 
 ```powershell
 npm install
-npm run build
+npm run setup
 ```
 
-The compiled MCP server is created at:
+This script will:
+1. Build the MCP server.
+2. Detect your After Effects installation and copy the ScriptUI panels.
+3. Update your `claude_desktop_config.json` with the correct paths.
 
-```text
-build/index.js
+## 🛠️ Manual Install
+
+If you prefer to set up manually:
+
+1. **Install Dependencies & Build**:
+   ```powershell
+   npm install
+   npm run build
+   ```
+2. **Copy ScriptUI Panels**: Move `mcp-connection-panel.jsx` or `mcp-http-bridge.jsx` to your After Effects `Scripts/ScriptUI Panels` folder.
+3. **Configure MCP Client**: Follow the instructions in [Connecting to MCP Clients](#connecting-to-mcp-clients).
+
+## 🔌 Connecting to MCP Clients
+
+### Claude Desktop
+Add this to your `claude_desktop_config.json` (found in `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "after-effects": {
+      "command": "node",
+      "args": ["<absolute path to after-effect-mcp>/build/index.js"],
+      "env": {
+        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>"
+      }
+    }
+  }
+}
 ```
 
-## Add To OpenCode
+### VSCode (Cline / Roo Code)
+If you are using MCP-enabled extensions like **Cline** or **Roo Code**, add the configuration to their respective settings (usually `cline_mcp_settings.json`):
 
-The easiest setup is:
+```json
+{
+  "mcpServers": {
+    "after-effects": {
+      "command": "node",
+      "args": ["<absolute path to after-effect-mcp>/build/index.js"],
+      "env": {
+        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>"
+      }
+    }
+  }
+}
+```
+
+### OpenCode & Codex
+The easiest way is to use the included installer:
 
 ```powershell
 npm run install:opencode
 ```
 
-That writes an `opencode.jsonc` file in the current folder with an `after_effects` MCP entry.
-
-To write to a specific OpenCode config path:
-
-```powershell
-npm run install:opencode -- C:\path\to\opencode.jsonc
-```
-
-## Manual OpenCode Config
-
-You can also add this manually:
+This will generate an `opencode.jsonc` file. For manual setup in **Codex**, use:
 
 ```jsonc
 {
-  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "after_effects": {
       "type": "local",
-      "command": [
-        "node",
-        "<absolute path to after-effect-mcp>/build/index.js"
-      ],
+      "command": ["node", "<absolute path to after-effect-mcp>/build/index.js"],
       "enabled": true,
       "environment": {
-        "AFTERFX_PATH": "<absolute path to AfterFX.com or AfterFX.exe>"
-      },
-      "timeout": 10000
+        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>"
+      }
     }
   }
 }
@@ -79,7 +118,7 @@ Replace both paths with the correct locations on your machine. If After Effects 
 
 - `ae_find_executable`: find the After Effects executable used by the server.
 - `ae_project_summary`: inspect the open project, active item, comps, footage, folders, and render queue.
-- `ae_eval`: run ExtendScript in After Effects and return JSON-serializable data.
+- `ae_eval`: run ExtendScript in After Effects and return JSON-serializable data. (Sandboxed: dangerous commands like `app.system` are blocked).
 - `ae_run_script_file`: run an existing `.jsx` or `.jsxbin` file.
 - `ae_create_comp`: create a composition.
 - `ae_list_comps`: list project compositions.
@@ -177,11 +216,34 @@ This MCP server executes Adobe ExtendScript code in After Effects. Key security 
 
 ### Security Audit
 
-A comprehensive security audit was performed on 2026-05-04:
-- **12 vulnerabilities fixed** (4 Critical, 4 High, 4 Medium)
-- **4 Low severity items remaining** (documentation, input sanitization)
+A comprehensive security audit and remediation was completed on 2026-05-04:
+- **15 vulnerabilities fixed** (5 Critical, 5 High, 5 Medium)
+- **Zero critical or high-risk vulnerabilities remaining**
+- **Improved ExtendScript Sandbox**: Blocks bracket-notation bypasses and dangerous file/system operations.
+- **Strict Path Validation**: All file-related tools (import, open, save, render) now strictly enforce `MCP_ALLOWED_DIRS`.
 
-See `docs/SECURITY.md` for full audit details.
+See `docs/SECURITY.md` for full audit details and remediation history.
+
+### ScriptUI Panels
+
+To use the MCP interface directly inside After Effects:
+
+1.  **Copy the Panels**: Move `mcp-connection-panel.jsx` or `mcp-http-bridge.jsx` to your After Effects `Scripts/ScriptUI Panels` folder.
+    *   **Windows**: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
+    *   **macOS**: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
+2.  **Enable Network Access**: In AE, go to `Preferences > Scripting & Expressions` and check **"Allow Scripts to Write Files and Access Network"**.
+3.  **Launch the Panel**: Restart After Effects and find the panel under the **Window** menu.
+
+> [!NOTE]
+> The `mcp-http-bridge.jsx` version requires the Node.js bridge to be running: `node mcp-http-bridge.js`.
+
+### HTTP Bridge Architecture
+
+For environments that cannot use stdio directly (like After Effects ScriptUI), use the included HTTP Bridge:
+
+1. **Start the Bridge**: `node mcp-http-bridge.js`
+2. **Access Tools**: Connect via `mcp-http-bridge.jsx` in After Effects.
+3. **Features**: Dynamic tool discovery, persistent connection management, and automated request-response mapping.
 
 ### Report Security Issues
 

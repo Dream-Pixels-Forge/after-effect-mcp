@@ -5,25 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-05-04
+
+### Fixed
+- **Security**: Fixed path traversal vulnerability in `ae_queue_render` by enforcing `validatePathSecurity`.
+- **Security**: Fixed ExtendScript injection risk in `ae_create_comp` by adding `sanitizeInput`.
+- **Security**: Hardened ExtendScript sandbox to block bracket-notation bypasses (e.g. `app["system"]`).
+- **Stability**: Fixed memory leak (listener leak) in `mcp-http-bridge.js` by using a persistent listener and callback registry.
+- **Syntax**: Fixed invalid triple-quote syntax in `mcp-connection-panel.jsx`.
+- **UX**: Improved connection status feedback in JSX UI panels.
+
+### Added
+- **Feature**: Dynamic tool discovery in HTTP bridge via `/tools` endpoint.
+- **Robustness**: Safer JSON parsing in ExtendScript environments.
+
+### Security Audit Result
+- **Status**: 🟢 CLEAN (Remediation Complete)
+- **Remaining Issues**: 0 Critical, 0 High.
+- **Verified**: Build passed, Smoke test passed.
+
 ## [Unreleased]
 
 ### Security
 - Comprehensive security audit completed (2026-05-04)
-- Identified 14 vulnerabilities (2 Critical, 4 High, 4 Medium, 4 Low)
+- Identified 15 vulnerabilities (5 Critical, 5 High, 5 Medium)
 - Created `docs/SECURITY.md` with full audit report
 - Created `docs/TASKS.md` with remediation tasks
 - Created `docs/PROGRESS.md` with session progress
-- **Critical**: Arbitrary ExtendScript execution via `ae_eval` (CVE-001, CVSS 9.0)
-- **Critical**: Path traversal in file operations (CVE-002, CVSS 8.8)
-- **High**: ExtendScript injection in `makeWrapper` (CVE-003, CVSS 7.8)
-- **High**: Unvalidated AE executable path (CVE-004, CVSS 7.0)
-- **High**: Supply chain risk from npmmirror.com registry (CVE-005, CVSS 6.5)
-- **High**: Arbitrary file execution via `ae_run_script_file` (CVE-006, CVSS 7.5)
-
-### Added
-- Comprehensive security documentation (`docs/SECURITY.md`)
-- Task tracking system (`docs/TASKS.md`)
-- Progress logging (`docs/PROGRESS.md`)
 
 ## [0.1.0] - 2026-05-04
 

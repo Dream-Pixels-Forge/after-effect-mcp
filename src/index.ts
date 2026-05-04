@@ -45,16 +45,17 @@ if (ALLOWED_DIRECTORIES.length === 0) {
 
 // Security: Forbidden patterns for ExtendScript execution (CVE-001 fix)
 const FORBIDDEN_EXTENDSCRIPT_PATTERNS = [
-  /app\.system/,
-  /File\.write/,
-  /File\.copy/,
-  /File\.save/,
-  /app\.exit/,
-  /eval\s*\(/,
-  /include\s*\(/,
-  /\$\./,
-  /system\.callSystem/,
+  /app\.(?:system|exit)/i,
+  /File\.(?:write|copy|save|remove|rename)/i,
+  /Folder\.(?:create|remove|rename)/i,
+  /eval\s*\(|include\s*\(/i,
+  /\$\.(?:evalFile|eval|write|writeln)/i,
+  /system\.callSystem/i,
   /executeCommand.*system/i,
+  // Catch bracket notation access to sensitive properties
+  /app\s*\[\s*['"](?:system|exit)['"]\s*\]/i,
+  /File\s*\[\s*['"](?:write|copy|save|remove|rename)['"]\s*\]/i,
+  /\$\s*\[\s*['"](?:evalFile|eval|write|writeln)['"]\s*\]/i,
 ];
 
 // Security: Validate that a path is within allowed directories
@@ -134,6 +135,22 @@ function findAfterEffectsExecutable(explicitPath?: string): string {
   const envPath = process.env.AFTERFX_PATH || process.env.AFTER_EFFECTS_PATH;
   if (envPath && existsSync(envPath)) {
     return envPath;
+  }
+
+  // Check for running AfterFX process (Windows)
+  if (process.platform === "win32") {
+    try {
+      const { execSync } = require("node:child_process");
+      const ps = execSync(
+        'powershell -Command "Get-Process -Name afterfx -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path"',
+        { encoding: "utf8", timeout: 5000 }
+      ).trim();
+      if (ps && existsSync(ps)) {
+        return ps;
+      }
+    } catch {
+      // Best-effort - process detection failed
+    }
   }
 
   if (process.platform === "win32") {
@@ -534,11 +551,13 @@ server.registerTool(
     },
   },
   async ({ name, width, height, duration, frameRate, pixelAspect, executablePath, timeoutMs }) => {
+    // Security: Sanitize name (CVE-014 fix)
+    const sanitizedName = sanitizeInput(name, 200);
     const code = `
 if (!app.project) app.newProject();
 app.beginUndoGroup("MCP Create Comp");
 try {
-    var comp = app.project.items.addComp("${escapeForJsString(name)}", ${width}, ${height}, ${pixelAspect}, ${duration}, ${frameRate});
+    var comp = app.project.items.addComp("${escapeForJsString(sanitizedName)}", ${width}, ${height}, ${pixelAspect}, ${duration}, ${frameRate});
     return { id: comp.id, name: comp.name, width: comp.width, height: comp.height, duration: comp.duration, frameRate: comp.frameRate };
 } finally {
     app.endUndoGroup();
@@ -834,9 +853,19 @@ server.registerTool(
     },
   },
   async ({ compName, outputPath, renderSettingsTemplate, outputModuleTemplate, executablePath, timeoutMs }) => {
+    // Security: Validate path if provided (CVE-002 fix)
+    let normalizedPath: string | undefined;
+    if (outputPath) {
+      const pathValidation = validatePathSecurity(outputPath);
+      if (!pathValidation.valid) {
+        return textResponse(`Security error: ${pathValidation.reason}`, { ok: false, error: pathValidation.reason });
+      }
+      normalizedPath = pathValidation.normalized!;
+    }
+
     // Security: Sanitize inputs (CVE-014 fix)
     const sanitizedCompName = compName ? sanitizeInput(compName, 200) : undefined;
-    const outputLine = outputPath ? `om.file = new File("${escapeForJsString(normalize(outputPath))}");` : "";
+    const outputLine = normalizedPath ? `om.file = new File("${escapeForJsString(normalizedPath)}");` : "";
     const renderSettingsLine = renderSettingsTemplate ? `rqItem.applyTemplate("${escapeForJsString(renderSettingsTemplate)}");` : "";
     const outputTemplateLine = outputModuleTemplate ? `om.applyTemplate("${escapeForJsString(outputModuleTemplate)}");` : "";
     const code = `
@@ -908,11 +937,6 @@ function validateAfterEffectsExecutable(executablePath: string): { valid: boolea
     return { valid: false, reason: "Path traversal detected in executable path" };
   }
 
-  // Must exist
-  if (!existsSync(normalized)) {
-    return { valid: false, reason: `Executable not found: ${normalized}` };
-  }
-
   // Must be a known AE executable name
   const fileName = basename(normalized).toLowerCase();
   const allowedNames = ["afterfx.exe", "afterfx.com", "afterfx"];
@@ -920,10 +944,36 @@ function validateAfterEffectsExecutable(executablePath: string): { valid: boolea
     return { valid: false, reason: `Executable name not allowed: ${fileName}` };
   }
 
+  // If it's just a command name (no directory path), don't check file existence
+  // Let the system resolve it via PATH
+  const hasPath = normalized.includes(sep) || normalized.includes("/");
+  if (!hasPath) {
+    return { valid: true, normalized };
+  }
+
+  // Full path provided - must exist
+  if (!existsSync(normalized)) {
+    return { valid: false, reason: `Executable not found: ${normalized}` };
+  }
+
   return { valid: true, normalized };
 }
 
 async function main() {
+  // Support 'npx after-effect-mcp setup'
+  if (process.argv.includes("setup")) {
+    console.log("🛠️ Starting After Effects MCP Setup...");
+    try {
+      // Use dynamic import for the setup script
+      const { runSetup } = await import("./setup-helper.js");
+      await runSetup();
+      return;
+    } catch (e) {
+      console.error("❌ Setup failed:", e);
+      process.exit(1);
+    }
+  }
+
   // Security: Validate auth token if configured (CVE-011 fix)
   if (MCP_AUTH_TOKEN) {
     const providedToken = process.env.MCP_CLIENT_TOKEN;

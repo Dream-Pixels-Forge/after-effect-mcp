@@ -1,6 +1,6 @@
 {
   "name": "after-effect-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local MCP server that lets MCP clients inspect and automate Adobe After Effects through ExtendScript.",
   "type": "module",
   "bin": {
@@ -14,7 +14,8 @@
     "smoke": "node ./scripts/smoke-test.mjs",
     "test": "npm run build && npm run check:afterfx && npm run smoke",
     "start": "node ./build/index.js",
-    "dev": "tsx ./src/index.ts"
+    "dev": "tsx ./src/index.ts",
+    "setup": "npm run build && node ./build/index.js setup"
   },
   "files": [
     "assets",
