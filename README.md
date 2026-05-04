@@ -154,3 +154,35 @@ npm run test:live
 - This server writes errors to stderr only.
 - `ae_eval` scripts should return JSON-serializable values.
 - For reliable automation, keep After Effects open before calling tools.
+
+## Security
+
+### Security Model
+
+This MCP server executes Adobe ExtendScript code in After Effects. Key security features:
+
+- **ExtendScript Whitelist**: Blocks dangerous patterns (`app.system`, `File.write`, `eval(`, etc.)
+- **Path Validation**: All file operations restricted to allowed directories via `MCP_ALLOWED_DIRS`
+- **Executable Validation**: After Effects executable path is validated
+- **Rate Limiting**: 100 requests per minute per client
+- **Source Maps Disabled**: No source map files in production builds
+
+### Environment Variables
+
+| Variable | Purpose | Default | Security |
+|----------|---------|---------|----------|
+| `AFTERFX_PATH` | Explicit After Effects executable path | Auto-detect | Validated |
+| `AFTER_EFFECTS_PATH` | Alternative path variable | Auto-detect | Validated |
+| `MCP_ALLOWED_DIRS` | Semicolon-separated allowed directories for file ops | Current directory | **Required for security** |
+
+### Security Audit
+
+A comprehensive security audit was performed on 2026-05-04:
+- **12 vulnerabilities fixed** (4 Critical, 4 High, 4 Medium)
+- **4 Low severity items remaining** (documentation, input sanitization)
+
+See `docs/SECURITY.md` for full audit details.
+
+### Report Security Issues
+
+For security concerns, review `docs/SECURITY.md` or open an issue with the "security" label.

@@ -23,3 +23,11 @@ opencode.jsonc
 *.psd
 *.ai
 *.log
+*.gif
+*.map
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# Keep .npmrc for registry configuration
+!.npmrc
