@@ -89,14 +89,30 @@ export async function runSetup() {
       }
     }
 
+    const isNpx = currentFile.includes("npx") || currentFile.includes(".npm");
+
     config.mcpServers = config.mcpServers || {};
-    config.mcpServers["after-effects"] = {
-      command: "node",
-      args: [join(projectRoot, "build", "index.js")],
-      env: {
-        MCP_ALLOWED_DIRS: projectRoot
-      }
-    };
+    
+    if (isNpx) {
+      // If running via npx, use npx in the command so it's always available
+      config.mcpServers["after-effects"] = {
+        command: "npx",
+        args: ["-y", "after-effect-mcp"],
+        env: {
+          MCP_ALLOWED_DIRS: process.cwd() // Default to current working directory
+        }
+      };
+      console.log("ℹ️ Running via npx: Configured Claude to use 'npx -y after-effect-mcp'.");
+    } else {
+      // If running from local clone, use absolute path to build/index.js
+      config.mcpServers["after-effects"] = {
+        command: "node",
+        args: [join(projectRoot, "build", "index.js")],
+        env: {
+          MCP_ALLOWED_DIRS: projectRoot
+        }
+      };
+    }
 
     try {
       writeFileSync(claudePath, JSON.stringify(config, null, 2), "utf8");
