@@ -1,0 +1,156 @@
+# After Effect MCP
+
+![After Effect MCP banner](assets/banner.svg)
+
+Local MCP server for Codex, OpenCode, and other MCP clients that lets ChatGPT inspect and automate Adobe After Effects through ExtendScript.
+
+The server runs over MCP stdio, launches `afterfx.com` or `AfterFX.exe` with a temporary JSX wrapper, and returns structured JSON results back to the MCP client.
+
+![After Effect MCP gif](assets/ae_mcp.gif)
+
+## Requirements
+
+- Node.js 18 or newer.
+- Adobe After Effects installed.
+- After Effects scripting access enabled:
+  `Edit > Preferences > Scripting & Expressions > Allow Scripts To Write Files And Access Network`.
+- For live automation, keep After Effects open before calling MCP tools.
+
+The server tries to auto-detect After Effects. If auto-detection does not find it, set `AFTERFX_PATH` to your local `AfterFX.com` or `AfterFX.exe` path.
+
+## Install
+
+From this project folder:
+
+```powershell
+npm install
+npm run build
+```
+
+The compiled MCP server is created at:
+
+```text
+build/index.js
+```
+
+## Add To OpenCode
+
+The easiest setup is:
+
+```powershell
+npm run install:opencode
+```
+
+That writes an `opencode.jsonc` file in the current folder with an `after_effects` MCP entry.
+
+To write to a specific OpenCode config path:
+
+```powershell
+npm run install:opencode -- C:\path\to\opencode.jsonc
+```
+
+## Manual OpenCode Config
+
+You can also add this manually:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "after_effects": {
+      "type": "local",
+      "command": [
+        "node",
+        "<absolute path to after-effect-mcp>/build/index.js"
+      ],
+      "enabled": true,
+      "environment": {
+        "AFTERFX_PATH": "<absolute path to AfterFX.com or AfterFX.exe>"
+      },
+      "timeout": 10000
+    }
+  }
+}
+```
+
+Replace both paths with the correct locations on your machine. If After Effects is already on your `PATH` or auto-detection works, you can omit the `environment` block.
+
+## Available Tools
+
+- `ae_find_executable`: find the After Effects executable used by the server.
+- `ae_project_summary`: inspect the open project, active item, comps, footage, folders, and render queue.
+- `ae_eval`: run ExtendScript in After Effects and return JSON-serializable data.
+- `ae_run_script_file`: run an existing `.jsx` or `.jsxbin` file.
+- `ae_create_comp`: create a composition.
+- `ae_list_comps`: list project compositions.
+- `ae_add_text_layer`: add a text layer to a composition.
+- `ae_add_solid`: add a solid layer to a composition.
+- `ae_import_file`: import media or project files.
+- `ae_open_project`: open an `.aep` project file.
+- `ae_save_project`: save the current project.
+- `ae_queue_render`: add a comp to the render queue without starting render.
+
+## Example Prompts
+
+```text
+Use the after_effects MCP tool to summarize the open After Effects project.
+```
+
+```text
+Create a new 1920x1080 composition named mcp_gpt_test.
+```
+
+```text
+Create a simple animated title sequence in After Effects with text layers and keyframes.
+```
+
+![After Effect MCP gif](assets/ae_mcp2.gif)
+
+## Example `ae_eval`
+
+Use ES3 ExtendScript syntax. After Effects ExtendScript does not support modern JavaScript features like `let`, `const`, arrow functions, promises, classes, or modules.
+
+```javascript
+if (!app.project) app.newProject();
+app.beginUndoGroup("MCP Example");
+try {
+    var comp = app.project.items.addComp("MCP Test", 1920, 1080, 1, 5, 30);
+    var text = comp.layers.addText("Hello from MCP");
+    text.property("Transform").property("Position").setValue([960, 540]);
+    comp.openInViewer();
+    return { comp: comp.name, layer: text.name };
+} finally {
+    app.endUndoGroup();
+}
+```
+
+## Tests
+
+All project tests have been run successfully during implementation.
+
+Completed checks:
+
+- `npm test`: passed.
+- TypeScript build: passed.
+- After Effects executable path check: passed.
+- MCP stdio tool discovery smoke test: passed.
+- Live After Effects MCP bridge test: passed after After Effects was opened.
+
+Do not rerun live After Effects tests unless After Effects is open and you explicitly want to exercise the running application.
+
+Useful commands:
+
+```powershell
+npm test
+```
+
+```powershell
+npm run test:live
+```
+
+## Notes
+
+- MCP stdio servers must not write normal logs to stdout because stdout carries JSON-RPC protocol messages.
+- This server writes errors to stderr only.
+- `ae_eval` scripts should return JSON-serializable values.
+- For reliable automation, keep After Effects open before calling tools.

@@ -1,0 +1,48 @@
+{
+  "name": "after-effect-mcp",
+  "version": "0.1.0",
+  "description": "Local MCP server that lets MCP clients inspect and automate Adobe After Effects through ExtendScript.",
+  "type": "module",
+  "bin": {
+    "after-effect-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "check:afterfx": "node ./scripts/check-afterfx-path.mjs",
+    "install:opencode": "node ./scripts/install-opencode-config.mjs",
+    "test:live": "npm run build && node ./scripts/live-ae-test.mjs",
+    "smoke": "node ./scripts/smoke-test.mjs",
+    "test": "npm run build && npm run check:afterfx && npm run smoke",
+    "start": "node ./build/index.js",
+    "dev": "tsx ./src/index.ts"
+  },
+  "files": [
+    "assets",
+    "build",
+    "examples",
+    "scripts",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "codex",
+    "opencode",
+    "after-effects",
+    "after-effects-scripting",
+    "extendscript"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
