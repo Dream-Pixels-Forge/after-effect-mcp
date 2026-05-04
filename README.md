@@ -119,13 +119,13 @@ If you are using MCP-enabled extensions like **Cline** or **Roo Code**, add the 
 
 ### OpenCode & Codex
 
-The easiest way is to use the included installer:
+The `setup` command automatically generates an `opencode.jsonc` file for you in the current directory. If you need to regenerate it:
 
 ```powershell
 npm run install:opencode
 ```
 
-This will generate an `opencode.jsonc` file. For manual setup in **Codex**, use:
+For manual setup in **Codex**, use:
 
 ```jsonc
 {

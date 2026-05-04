@@ -77,54 +77,116 @@ export async function runSetup() {
     console.warn("⚠️ Could not find After Effects installation to copy ScriptUI panels.");
   }
 
-  // 2. Update Claude Config
-  const claudePath = getClaudeConfigPath();
-  if (claudePath && existsSync(dirname(claudePath))) {
-    let config: any = { mcpServers: {} };
-    if (existsSync(claudePath)) {
-      try {
-        config = JSON.parse(readFileSync(claudePath, "utf8"));
-      } catch (e) {
-        console.error(`⚠️ Could not parse Claude config at ${claudePath}. Skipping auto-injection.`);
-      }
+  // 2. Update MCP Client Configurations
+  const configs = [
+    {
+      name: "Claude Desktop",
+      path: getClaudeConfigPath(),
+      type: "mcpServers"
+    },
+    {
+      name: "VSCode Cline",
+      path: process.platform === "win32" 
+        ? join(process.env.APPDATA || "", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+        : join(os.homedir(), "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+      type: "mcpServers"
+    },
+    {
+      name: "VSCode Roo Code",
+      path: process.platform === "win32" 
+        ? join(process.env.APPDATA || "", "Code", "User", "globalStorage", "rooveterinaryinc.roo-cline", "settings", "cline_mcp_settings.json")
+        : join(os.homedir(), "Library", "Application Support", "Code", "User", "globalStorage", "rooveterinaryinc.roo-cline", "settings", "cline_mcp_settings.json"),
+      type: "mcpServers"
+    },
+    {
+      name: "OpenCode/Codex",
+      path: join(process.cwd(), "opencode.jsonc"),
+      type: "mcp"
     }
+  ];
 
-    const isNpx = currentFile.includes("npx") || currentFile.includes(".npm");
+  const isNpx = currentFile.includes("npx") || currentFile.includes(".npm");
 
-    config.mcpServers = config.mcpServers || {};
+  for (const configInfo of configs) {
+    const configPath = configInfo.path;
+    if (!configPath) continue;
+
+    // For OpenCode, we always create it if it doesn't exist but we are in a project
+    const shouldCreate = configInfo.name === "OpenCode/Codex";
     
-    if (isNpx) {
-      // If running via npx, use npx in the command so it's always available
-      config.mcpServers["after-effects"] = {
-        command: "npx",
-        args: ["-y", "after-effect-mcp"],
-        env: {
-          MCP_ALLOWED_DIRS: process.cwd() // Default to current working directory
-        }
-      };
-      console.log("ℹ️ Running via npx: Configured Claude to use 'npx -y after-effect-mcp'.");
-    } else {
-      // If running from local clone, use absolute path to build/index.js
-      config.mcpServers["after-effects"] = {
-        command: "node",
-        args: [join(projectRoot, "build", "index.js")],
-        env: {
-          MCP_ALLOWED_DIRS: projectRoot
-        }
-      };
-    }
+    if (existsSync(configPath) || shouldCreate) {
+      if (!existsSync(dirname(configPath))) {
+        if (shouldCreate) mkdirSync(dirname(configPath), { recursive: true });
+        else continue;
+      }
 
-    try {
-      writeFileSync(claudePath, JSON.stringify(config, null, 2), "utf8");
-      console.log(`✅ Updated Claude Desktop configuration at ${claudePath}`);
-    } catch (e) {
-      console.error(`⚠️ Could not write to Claude config at ${claudePath}.`);
+      let config: any = {};
+      if (configInfo.type === "mcpServers") {
+        config = { mcpServers: {} };
+      } else {
+        config = { mcp: {} };
+      }
+
+      if (existsSync(configPath)) {
+        try {
+          const content = readFileSync(configPath, "utf8");
+          // Simple JSONC handling (remove comments for parsing)
+          const cleanJson = content.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+          config = JSON.parse(cleanJson);
+        } catch (e) {
+          console.error(`⚠️ Could not parse ${configInfo.name} config at ${configPath}. Skipping.`);
+          continue;
+        }
+      }
+
+      const mcpKey = configInfo.type;
+      config[mcpKey] = config[mcpKey] || {};
+      
+      if (configInfo.type === "mcpServers") {
+        if (isNpx) {
+          config.mcpServers["after-effects"] = {
+            command: "npx",
+            args: ["-y", "after-effect-mcp"],
+            env: { MCP_ALLOWED_DIRS: process.cwd() }
+          };
+        } else {
+          config.mcpServers["after-effects"] = {
+            command: "node",
+            args: [join(projectRoot, "build", "index.js")],
+            env: { MCP_ALLOWED_DIRS: projectRoot }
+          };
+        }
+      } else {
+        // OpenCode/Codex format
+        if (isNpx) {
+          config.mcp.after_effects = {
+            type: "local",
+            command: ["npx", "-y", "after-effect-mcp"],
+            enabled: true,
+            environment: { MCP_ALLOWED_DIRS: process.cwd() }
+          };
+        } else {
+          config.mcp.after_effects = {
+            type: "local",
+            command: ["node", join(projectRoot, "build", "index.js")],
+            enabled: true,
+            environment: { MCP_ALLOWED_DIRS: projectRoot }
+          };
+        }
+      }
+
+      try {
+        writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+        console.log(`✅ Updated ${configInfo.name} configuration at ${configPath}`);
+      } catch (e) {
+        console.error(`⚠️ Could not write to ${configInfo.name} config at ${configPath}.`);
+      }
+    } else {
+      // Quietly skip if the client isn't installed
     }
-  } else {
-    console.log("ℹ️ Claude Desktop not found. Skipping config injection.");
   }
 
-  console.log("\n🎉 Setup complete! Restart After Effects and Claude Desktop to begin.");
+  console.log("\n🎉 Setup complete! Restart your MCP clients and After Effects to begin.");
   console.log("👉 Don't forget to enable 'Allow Scripts to Write Files and Access Network' in AE Preferences.");
 }
 
@@ -190,18 +252,55 @@ export async function runUninstall() {
     }
   }
 
-  // 2. Remove from Claude Config
-  const claudePath = getClaudeConfigPath();
-  if (claudePath && existsSync(claudePath)) {
-    try {
-      const config = JSON.parse(readFileSync(claudePath, "utf8"));
-      if (config.mcpServers && config.mcpServers["after-effects"]) {
-        delete config.mcpServers["after-effects"];
-        writeFileSync(claudePath, JSON.stringify(config, null, 2), "utf8");
-        console.log(`✅ Removed 'after-effects' from Claude Desktop configuration.`);
+  // 2. Remove Config from Clients
+  const configs = [
+    {
+      name: "Claude Desktop",
+      path: getClaudeConfigPath(),
+      type: "mcpServers"
+    },
+    {
+      name: "VSCode Cline",
+      path: process.platform === "win32" 
+        ? join(process.env.APPDATA || "", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+        : join(os.homedir(), "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+      type: "mcpServers"
+    },
+    {
+      name: "VSCode Roo Code",
+      path: process.platform === "win32" 
+        ? join(process.env.APPDATA || "", "Code", "User", "globalStorage", "rooveterinaryinc.roo-cline", "settings", "cline_mcp_settings.json")
+        : join(os.homedir(), "Library", "Application Support", "Code", "User", "globalStorage", "rooveterinaryinc.roo-cline", "settings", "cline_mcp_settings.json"),
+      type: "mcpServers"
+    },
+    {
+      name: "OpenCode/Codex",
+      path: join(process.cwd(), "opencode.jsonc"),
+      type: "mcp"
+    }
+  ];
+
+  for (const configInfo of configs) {
+    const configPath = configInfo.path;
+    if (configPath && existsSync(configPath)) {
+      try {
+        const content = readFileSync(configPath, "utf8");
+        // Simple JSONC handling (remove comments for parsing)
+        const cleanJson = content.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+        const config = JSON.parse(cleanJson);
+        
+        const mcpKey = configInfo.type;
+        if (config[mcpKey]) {
+          const keyToDelete = configInfo.type === "mcpServers" ? "after-effects" : "after_effects";
+          if (config[mcpKey][keyToDelete]) {
+            delete config[mcpKey][keyToDelete];
+            writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+            console.log(`✅ Removed After Effects MCP from ${configInfo.name} config.`);
+          }
+        }
+      } catch (e) {
+        console.error(`⚠️ Could not update ${configInfo.name} config at ${configPath}.`);
       }
-    } catch (e) {
-      console.error(`⚠️ Could not update Claude config at ${claudePath}.`);
     }
   }
 
