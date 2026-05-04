@@ -199,11 +199,19 @@ export async function runSetup() {
       const mcpKey = configInfo.type;
       config[mcpKey] = config[mcpKey] || {};
       
+      const existingKey = configInfo.type === "mcpServers" ? "after-effects" : "after_effects";
+      
+      // Only add if it doesn't already exist
+      if (config[mcpKey][existingKey]) {
+        console.log(`⏭️ ${configInfo.name}: '${existingKey}' already exists, skipping.`);
+        continue;
+      }
+      
       if (configInfo.type === "mcpServers") {
         if (isNpx) {
           config.mcpServers["after-effects"] = {
             command: "npx",
-            args: ["-y", "after-effect-mcp"],
+            args: ["-y", "github:Dream-Pixels-Forge/after-effect-mcp"],
             env: { MCP_ALLOWED_DIRS: process.cwd() }
           };
         } else {
@@ -218,7 +226,7 @@ export async function runSetup() {
         if (isNpx) {
           config.mcp.after_effects = {
             type: "local",
-            command: ["npx", "-y", "after-effect-mcp"],
+            command: ["npx", "-y", "github:Dream-Pixels-Forge/after-effect-mcp"],
             enabled: true,
             environment: { MCP_ALLOWED_DIRS: process.cwd() }
           };
