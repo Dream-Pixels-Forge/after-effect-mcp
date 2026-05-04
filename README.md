@@ -24,6 +24,14 @@ If you have Node.js installed, you can set up everything with one command withou
 npx -y after-effect-mcp setup
 ```
 
+### 🐙 Install via GitHub (npx)
+
+If the package is not yet on npm, or you want the latest development version, you can install directly from GitHub:
+
+```powershell
+npx -y github:Dream-Pixels-Forge/after-effect-mcp setup
+```
+
 This will automatically build the server, install After Effects panels, and configure your MCP clients.
 
 ## 📦 Local Setup (Recommended for Developers)
