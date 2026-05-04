@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AE MCP Bridge</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #2a2a2a;
+            color: #ddd;
+            padding: 15px;
+            margin: 0;
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+            margin-bottom: 15px;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 16px;
+            color: #fff;
+        }
+        .status-row {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .label {
+            width: 100px;
+            font-size: 12px;
+            color: #999;
+        }
+        .value {
+            flex: 1;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-on { background: #4caf50; }
+        .status-off { background: #f44336; }
+        .btn {
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+        .btn:hover { background: #555; }
+        .btn-primary { background: #2196f3; }
+        .btn-primary:hover { background: #1976d2; }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-num {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .stat-label {
+            font-size: 10px;
+            color: #888;
+        }
+        .log {
+            background: #1a1a1a;
+            padding: 10px;
+            height: 100px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-error { color: #f44336; }
+        .log-success { color: #4caf50; }
+        .info {
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>🎬 AE MCP Bridge</h2>
+    </div>
+    
+    <div class="status-row">
+        <span class="label">Status:</span>
+        <span id="status">
+            <span class="status-indicator status-on" id="statusDot"></span>
+            <span id="statusText">Active</span>
+        </span>
+    </div>
+    
+    <div class="status-row">
+        <span class="label">Watch Folder:</span>
+        <span class="value" id="watchFolder">...</span>
+    </div>
+    
+    <div class="status-row">
+        <span class="label">Auto Process:</span>
+        <button class="btn" id="toggleAuto" onclick="toggleAutoProcess()">ON</button>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-num" id="cmdCount">0</div>
+            <div class="stat-label">Commands</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num" id="errCount">0</div>
+            <div class="stat-label">Errors</div>
+        </div>
+    </div>
+    
+    <div class="status-row">
+        <span class="label">Last:</span>
+        <span class="value" id="lastCmd">None</span>
+    </div>
+    
+    <div class="log" id="log">
+        <div class="log-entry">Ready...</div>
+    </div>
+    
+    <div class="info">
+        Commands processed via file bridge
+    </div>
+    
+    <script>
+        var autoProcess = true;
+        
+        function toggleAutoProcess() {
+            autoProcess = !autoProcess;
+            document.getElementById('toggleAuto').textContent = autoProcess ? 'ON' : 'OFF';
+            document.getElementById('statusDot').className = 'status-indicator ' + (autoProcess ? 'status-on' : 'status-off');
+            document.getElementById('statusText').textContent = autoProcess ? 'Active' : 'Paused';
+            
+            if (typeof setAutoProcess === 'function') {
+                setAutoProcess(autoProcess);
+            }
+        }
+        
+        function addLog(msg, type) {
+            var log = document.getElementById('log');
+            var entry = document.createElement('div');
+            entry.className = 'log-entry ' + (type || '');
+            entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+            log.insertBefore(entry, log.firstChild);
+        }
+        
+        function updateStatus(state) {
+            if (!state) return;
+            
+            document.getElementById('watchFolder').textContent = state.watchFolder || 'N/A';
+            document.getElementById('cmdCount').textContent = state.commandCount || 0;
+            document.getElementById('errCount').textContent = state.errorCount || 0;
+            document.getElementById('lastCmd').textContent = state.lastProcessed || 'None';
+            document.getElementById('statusDot').className = 'status-indicator ' + (state.autoProcess ? 'status-on' : 'status-off');
+            document.getElementById('statusText').textContent = state.autoProcess ? 'Active' : 'Paused';
+        }
+        
+        // Poll for state updates
+        setInterval(function() {
+            if (typeof getCEPState === 'function') {
+                try {
+                    var state = getCEPState();
+                    updateStatus(state);
+                    
+                    if (state.lastProcessed && state.lastProcessed !== lastProcessed) {
+                        lastProcessed = state.lastProcessed;
+                        addLog('Processed: ' + lastProcessed, 'log-success');
+                    }
+                } catch(e) {}
+            }
+        }, 1000);
+        
+        var lastProcessed = null;
+    </script>
+</body>
+</html>

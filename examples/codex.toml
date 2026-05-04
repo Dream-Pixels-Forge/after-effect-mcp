@@ -1,0 +1,20 @@
+# Codex MCP Configuration
+# Add to ~/.codex/config.toml or project .codex/config.toml
+
+# Option 1: Using npx from GitHub (recommended)
+[mcp_servers.after_effects]
+command = "npx"
+args = ["-y", "github:Dream-Pixels-Forge/after-effect-mcp"]
+env_vars = ["MCP_ALLOWED_DIRS"]
+
+# Option 2: Using local build
+# [mcp_servers.after_effects]
+# command = "node"
+# args = ["/absolute/path/to/after-effect-mcp/build/index.js"]
+# env_vars = ["MCP_ALLOWED_DIRS"]
+
+# Option 3: File bridge mode (more reliable on Windows)
+# [mcp_servers.after_effects_bridge]
+# command = "npx"
+# args = ["-y", "github:Dream-Pixels-Forge/after-effect-mcp", "start:bridge"]
+# env_vars = ["MCP_ALLOWED_DIRS"]

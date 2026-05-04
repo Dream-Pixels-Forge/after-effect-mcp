@@ -12,20 +12,66 @@ export async function runSetup() {
   const currentFile = fileURLToPath(import.meta.url);
   const projectRoot = resolve(dirname(dirname(currentFile)));
   
-  const panels = ["mcp-connection-panel.jsx", "mcp-http-bridge.jsx"];
+  // CEP extension files (no ScriptUI panels anymore)
+  const cepFiles = ["manifest.json", "main.js", "index.html"];
 
   function findAfterEffectsSupportDir() {
+    // First: Try to find from running After Effects process
     if (process.platform === "win32") {
-      const roots = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"]].filter(Boolean) as string[];
-      for (const root of roots) {
-        const adobeRoot = join(root, "Adobe");
-        if (!existsSync(adobeRoot)) continue;
+      try {
+        const ps = execSync(
+          'powershell -Command "Get-Process -Name afterfx,AfterFX -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path"',
+          { encoding: "utf8", timeout: 5000 }
+        ).trim();
+        if (ps && existsSync(ps)) {
+          const supportDir = dirname(ps);
+          const scriptUiDir = join(supportDir, "Scripts", "ScriptUI Panels");
+          // Return Support Files directory
+          if (existsSync(join(supportDir, "Scripts"))) {
+            console.log(`📍 Detected running After Effects at: ${supportDir}`);
+            return supportDir;
+          }
+        }
+      } catch {
+        // Fall through to standard search
+      }
+    }
+
+    // Second: Search Program Files for AE installation
+    if (process.platform === "win32") {
+      // Search all drives A-Z for Adobe folder (slower but comprehensive)
+      const driveLetters = "DEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      
+      // First check common Program Files locations
+      const commonRoots = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"]].filter(Boolean) as string[];
+      for (const root of commonRoots) {
+        const supportDir = findAdobeInFolder(root);
+        if (supportDir) return supportDir;
+      }
+      
+      // Then check other drives
+      for (const drive of driveLetters) {
+        if (drive === "C") continue; // Already checked
+        const supportDir = findAdobeInFolder(`${drive}:\\Program Files`);
+        if (supportDir) return supportDir;
+        const supportDirX86 = findAdobeInFolder(`${drive}:\\Program Files (x86)`);
+        if (supportDirX86) return supportDirX86;
+      }
+    }
+    
+    function findAdobeInFolder(basePath: string): string | null {
+      const adobeRoot = join(basePath, "Adobe");
+      if (!existsSync(adobeRoot)) return null;
+      try {
         for (const entry of readdirSync(adobeRoot, { withFileTypes: true })) {
           if (!entry.isDirectory() || !entry.name.startsWith("Adobe After Effects")) continue;
           const supportDir = join(adobeRoot, entry.name, "Support Files");
           if (existsSync(supportDir)) return supportDir;
         }
+      } catch {
+        // Skip inaccessible folders
       }
+      return null;
     }
 
     if (process.platform === "darwin") {
@@ -52,32 +98,38 @@ export async function runSetup() {
 
   console.log("🚀 Starting After Effects MCP Auto-Setup...");
 
-  // 1. Copy Panels
+  // 1. Copy CEP Extension
   const aeSupportDir = findAfterEffectsSupportDir();
-  if (aeSupportDir) {
-    const scriptUiDir = join(aeSupportDir, "Scripts", "ScriptUI Panels");
-    if (!existsSync(scriptUiDir)) {
-      console.log(`📂 Creating ScriptUI Panels directory: ${scriptUiDir}`);
-      mkdirSync(scriptUiDir, { recursive: true });
+  const cepDir = findCEPExtDir();
+  if (aeSupportDir && cepDir) {
+    const cepDestDir = join(cepDir, "AE-MCP-Bridge");
+    if (!existsSync(cepDestDir)) {
+      mkdirSync(cepDestDir, { recursive: true });
     }
-
-    for (const panel of panels) {
-      const src = join(projectRoot, panel);
-      const dest = join(scriptUiDir, panel);
+    
+    for (const file of cepFiles) {
+      const src = join(projectRoot, "cep-extension", file);
+      const dest = join(cepDestDir, file);
       try {
         if (existsSync(src)) {
           copyFileSync(src, dest);
-          console.log(`✅ Copied ${panel} to AE ScriptUI Panels.`);
+          console.log(`✅ Copied CEP ${file} to AE CEP Extensions.`);
         }
       } catch (e) {
-        console.warn(`⚠️ Could not copy ${panel} to AE. (Permission issue?)`);
+        console.warn(`⚠️ Could not copy CEP ${file}. (Permission issue?)`);
       }
     }
-  } else {
-    console.warn("⚠️ Could not find After Effects installation to copy ScriptUI panels.");
   }
 
-  // 2. Update MCP Client Configurations
+  function findCEPExtDir() {
+    if (!aeSupportDir) return null;
+    
+    // CEP extensions go in the CEPPlugIns folder
+    const cepPlugIns = join(aeSupportDir, "CEPPlugIns");
+    return cepPlugIns;
+  }
+
+  // 3. Update MCP Client Configurations
   const configs = [
     {
       name: "Claude Desktop",
@@ -201,7 +253,7 @@ export async function runSetup() {
 export async function runUninstall() {
   const currentFile = fileURLToPath(import.meta.url);
   const projectRoot = resolve(dirname(dirname(currentFile)));
-  const panels = ["mcp-connection-panel.jsx", "mcp-http-bridge.jsx"];
+  const cepFiles = ["manifest.json", "main.js", "index.html"];
 
   function findAfterEffectsSupportDir() {
     if (process.platform === "win32") {
@@ -240,19 +292,21 @@ export async function runUninstall() {
 
   console.log("🗑️ Starting After Effects MCP Uninstall...");
 
-  // 1. Remove Panels
+  // 1. Remove CEP Extension
   const aeSupportDir = findAfterEffectsSupportDir();
   if (aeSupportDir) {
-    const scriptUiDir = join(aeSupportDir, "Scripts", "ScriptUI Panels");
-    for (const panel of panels) {
-      const dest = join(scriptUiDir, panel);
-      if (existsSync(dest)) {
-        try {
-          import("node:fs").then(fs => fs.unlinkSync(dest));
-          console.log(`✅ Removed ${panel} from AE ScriptUI Panels.`);
-        } catch (e) {
-          console.warn(`⚠️ Could not remove ${panel} from AE.`);
+    const cepDir = join(aeSupportDir, "CEPPlugIns", "AE-MCP-Bridge");
+    if (existsSync(cepDir)) {
+      try {
+        const fs = require("node:fs");
+        const files = fs.readdirSync(cepDir);
+        for (const file of files) {
+          fs.unlinkSync(join(cepDir, file));
         }
+        fs.rmdirSync(cepDir);
+        console.log("✅ Removed AE-MCP-Bridge from CEPPlugIns.");
+      } catch (e) {
+        console.warn("⚠️ Could not remove CEP extension from AE.");
       }
     }
   }

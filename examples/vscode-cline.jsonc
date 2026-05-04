@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "after-effects": {
+      "command": "node",
+      "args": ["<absolute path to after-effect-mcp>/build/index.js"],
+      "env": {
+        "MCP_ALLOWED_DIRS": "<path to your projects folder>"
+      }
+    }
+  }
+}

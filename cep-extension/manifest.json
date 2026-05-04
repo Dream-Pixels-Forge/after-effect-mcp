@@ -1,0 +1,24 @@
+{
+  "id": "com.dreampixels.ae-mcp-bridge",
+  "name": "AE MCP Bridge",
+  "description": "File-based MCP bridge for After Effects",
+  "version": "1.0.0",
+  "author": "Dream Pixels Forge",
+  "main": "main.js",
+  "type": "panel",
+  "panel": {
+    "name": "AE MCP Bridge",
+    "port": "0",
+    "maxHeight": "300",
+    "minWidth": "350",
+    "minHeight": "200"
+  },
+  "host": {
+    "app": "AEFC",
+    "version": "[22.0,99.9]"
+  },
+  "requiredRuntime": {
+    "minimumVersion": "10.0"
+  },
+  "entry": "main.js"
+}

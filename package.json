@@ -14,6 +14,7 @@
     "smoke": "node ./scripts/smoke-test.mjs",
     "test": "npm run build && npm run check:afterfx && npm run smoke",
     "start": "node ./build/index.js",
+    "start:bridge": "node ./build/file-bridge.js",
     "dev": "tsx ./src/index.ts",
     "setup": "npm run build && node ./build/index.js setup",
     "uninstall": "node ./build/index.js uninstall"
@@ -22,6 +23,7 @@
     "assets",
     "bin",
     "build",
+    "cep-extension",
     "examples",
     "scripts",
     "src",

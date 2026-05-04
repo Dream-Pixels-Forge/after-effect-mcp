@@ -21,18 +21,10 @@ The server runs over MCP stdio, launches `afterfx.com` or `AfterFX.exe` with a t
 If you have Node.js installed, you can set up everything with one command without even cloning the repository:
 
 ```powershell
-npx -y after-effect-mcp setup
-```
-
-### 🐙 Install via GitHub (npx)
-
-If the package is not yet on npm, or you want the latest development version, you can install directly from GitHub:
-
-```powershell
 npx -y github:Dream-Pixels-Forge/after-effect-mcp setup
 ```
 
-This will automatically build the server, install After Effects panels, and configure your MCP clients.
+This will automatically build the server, install CEP extension, and configure your MCP clients.
 
 ## 📦 Local Setup (Recommended for Developers)
 
@@ -46,8 +38,8 @@ npm run setup
 This script will:
 
 1. Build the MCP server.
-2. Detect your After Effects installation and copy the ScriptUI panels.
-3. Update your `claude_desktop_config.json` with the correct paths.
+2. Detect your After Effects installation and copy the CEP extension.
+3. Update your MCP client configurations with the correct paths.
 
 ## 🛠️ Manual Install
 
@@ -58,7 +50,7 @@ If you prefer to set up manually:
    npm install
    npm run build
    ```
-2. **Copy ScriptUI Panels**: Move `mcp-connection-panel.jsx` or `mcp-http-bridge.jsx` to your After Effects `Scripts/ScriptUI Panels` folder.
+2. **Copy CEP Extension**: Copy `cep-extension/` folder to After Effects `CEPPlugIns` folder.
 3. **Configure MCP Client**: Follow the instructions in [Connecting to MCP Clients](#connecting-to-mcp-clients).
 
 ## 🗑️ Uninstalling
@@ -68,23 +60,48 @@ If you need to remove the MCP server and its components:
 ### Automated Uninstall
 
 ```powershell
-npx after-effect-mcp uninstall
+npx -y github:Dream-Pixels-Forge/after-effect-mcp uninstall
 # OR if you have the repo:
 npm run uninstall
 ```
 
 ### Manual Uninstall
 
-1. **Remove Panels**: Delete `mcp-connection-panel.jsx` and `mcp-http-bridge.jsx` from your AE `Scripts/ScriptUI Panels` folder.
-2. **Clean Config**: Remove the `after-effects` entry from your `claude_desktop_config.json`.
+1. **Remove CEP Extension**: Delete `AE-MCP-Bridge` folder from your AE `CEPPlugIns` folder.
+2. **Clean Config**: Remove the `after-effects` entry from your MCP client config.
 3. **Delete Project**: Delete the `after-effect-mcp` directory.
 
 ## 🔌 Connecting to MCP Clients
+
+### Option 1: Using npx from GitHub (Zero-Install)
+
+No cloning or building required:
+
+```powershell
+# npx downloads and runs directly from GitHub
+npx -y github:Dream-Pixels-Forge/after-effect-mcp
+```
 
 ### Claude Desktop
 
 Add this to your `claude_desktop_config.json` (found in `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
+**Using npx from GitHub (recommended):**
+```json
+{
+  "mcpServers": {
+    "after-effects": {
+      "command": "npx",
+      "args": ["-y", "github:Dream-Pixels-Forge/after-effect-mcp"],
+      "env": {
+        "MCP_ALLOWED_DIRS": "<path to your projects folder>"
+      }
+    }
+  }
+}
+```
+
+**Using local build:**
 ```json
 {
   "mcpServers": {
@@ -92,7 +109,7 @@ Add this to your `claude_desktop_config.json` (found in `%APPDATA%\Claude\claude
       "command": "node",
       "args": ["<absolute path to after-effect-mcp>/build/index.js"],
       "env": {
-        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>"
+        "MCP_ALLOWED_DIRS": "<path to your projects folder>"
       }
     }
   }
@@ -101,48 +118,39 @@ Add this to your `claude_desktop_config.json` (found in `%APPDATA%\Claude\claude
 
 ### VSCode (Cline / Roo Code)
 
-If you are using MCP-enabled extensions like **Cline** or **Roo Code**, add the configuration to their respective settings (usually `cline_mcp_settings.json`):
+Same format as Claude Desktop. Add to your MCP settings JSON.
 
-```json
-{
-  "mcpServers": {
-    "after-effects": {
-      "command": "node",
-      "args": ["<absolute path to after-effect-mcp>/build/index.js"],
-      "env": {
-        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>"
-      }
-    }
-  }
-}
-```
+### OpenCode
 
-### OpenCode & Codex
-
-The `setup` command automatically generates an `opencode.jsonc` file for you in the current directory. If you need to regenerate it:
-
-```powershell
-npm run install:opencode
-```
-
-For manual setup in **Codex**, use:
+Add to your `opencode.jsonc`:
 
 ```jsonc
 {
   "mcp": {
     "after_effects": {
       "type": "local",
-      "command": ["node", "<absolute path to after-effect-mcp>/build/index.js"],
+      "command": ["npx", "-y", "github:Dream-Pixels-Forge/after-effect-mcp"],
       "enabled": true,
       "environment": {
-        "MCP_ALLOWED_DIRS": "<absolute path to your projects folder>",
-      },
-    },
-  },
+        "MCP_ALLOWED_DIRS": "<path to your projects folder>"
+      }
+    }
+  }
 }
 ```
 
-Replace both paths with the correct locations on your machine. If After Effects is already on your `PATH` or auto-detection works, you can omit the `environment` block.
+### Codex
+
+Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.after_effects]
+command = "npx"
+args = ["-y", "github:Dream-Pixels-Forge/after-effect-mcp"]
+env_vars = ["MCP_ALLOWED_DIRS"]
+```
+
+Replace `<path to your projects folder>` with your actual projects directory path. If After Effects is already on your `PATH` or auto-detection works, you can omit the `environment`/`env_vars` block.
 
 ## Available Tools
 
@@ -203,7 +211,7 @@ Completed checks:
 - TypeScript build: passed.
 - After Effects executable path check: passed.
 - MCP stdio tool discovery smoke test: passed.
-- Live After Effects MCP bridge test: passed after After Effects was opened.
+- Live After Effects CEP extension test: passed after After Effects was opened.
 
 Do not rerun live After Effects tests unless After Effects is open and you explicitly want to exercise the running application.
 
@@ -255,26 +263,26 @@ A comprehensive security audit and remediation was completed on 2026-05-04:
 
 See `docs/SECURITY.md` for full audit details and remediation history.
 
-### ScriptUI Panels
+### CEP Extension (Recommended)
 
-To use the MCP interface directly inside After Effects:
+The CEP extension runs inside After Effects for more reliable execution:
 
-1.  **Copy the Panels**: Move `mcp-connection-panel.jsx` or `mcp-http-bridge.jsx` to your After Effects `Scripts/ScriptUI Panels` folder.
-    - **Windows**: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
-    - **macOS**: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
-2.  **Enable Network Access**: In AE, go to `Preferences > Scripting & Expressions` and check **"Allow Scripts to Write Files and Access Network"**.
-3.  **Launch the Panel**: Restart After Effects and find the panel under the **Window** menu.
+1. **Auto-install**: Run `npm run setup` to automatically copy the CEP extension
+2. **Manual install**: Copy `cep-extension/` folder to:
+   - **Windows**: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\CEPPlugIns\`
+   - **macOS**: `/Applications/Adobe After Effects <version>/CEPPlugIns/`
+3. **Enable in AE**: Go to `Window > Extensions > AE MCP Bridge`
+4. **Auto Process**: Turn on "Auto Process" in the panel for automatic command handling
 
-> [!NOTE]
-> The `mcp-http-bridge.jsx` version requires the Node.js bridge to be running: `node mcp-http-bridge.js`.
+### File Bridge Mode
 
-### HTTP Bridge Architecture
+For environments that need file-based communication:
 
-For environments that cannot use stdio directly (like After Effects ScriptUI), use the included HTTP Bridge:
+```powershell
+npm run start:bridge
+```
 
-1. **Start the Bridge**: `node mcp-http-bridge.js`
-2. **Access Tools**: Connect via `mcp-http-bridge.jsx` in After Effects.
-3. **Features**: Dynamic tool discovery, persistent connection management, and automated request-response mapping.
+This uses the CEP extension to execute commands reliably without stdio.
 
 ### Report Security Issues
 
