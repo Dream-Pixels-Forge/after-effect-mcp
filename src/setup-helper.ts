@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, copyFileSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readdirSync, copyFileSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmdirSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
@@ -306,12 +306,11 @@ export async function runUninstall() {
     const cepDir = join(aeSupportDir, "CEPPlugIns", "AE-MCP-Bridge");
     if (existsSync(cepDir)) {
       try {
-        const fs = require("node:fs");
-        const files = fs.readdirSync(cepDir);
+        const files = readdirSync(cepDir);
         for (const file of files) {
-          fs.unlinkSync(join(cepDir, file));
+          unlinkSync(join(cepDir, file));
         }
-        fs.rmdirSync(cepDir);
+        rmdirSync(cepDir);
         console.log("✅ Removed AE-MCP-Bridge from CEPPlugIns.");
       } catch (e) {
         console.warn("⚠️ Could not remove CEP extension from AE.");

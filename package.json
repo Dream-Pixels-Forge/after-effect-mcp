@@ -9,14 +9,18 @@
   "scripts": {
     "build": "tsc",
     "check:afterfx": "node ./scripts/check-afterfx-path.mjs",
+    "install:clients": "node ./scripts/install-client-configs.mjs",
     "install:opencode": "node ./scripts/install-opencode-config.mjs",
-    "test:live": "npm run build && node ./scripts/live-ae-test.mjs",
+    "test:live": "tsc && node ./scripts/live-ae-test.mjs",
     "smoke": "node ./scripts/smoke-test.mjs",
-    "test": "npm run build && npm run check:afterfx && npm run smoke",
+    "smoke:http": "node ./scripts/http-smoke-test.mjs",
+    "test": "tsc && node ./scripts/check-afterfx-path.mjs && node ./scripts/smoke-test.mjs && node ./scripts/http-smoke-test.mjs",
     "start": "node ./build/index.js",
     "start:bridge": "node ./build/file-bridge.js",
+    "start:http": "node ./build/http-bridge.js",
     "dev": "tsx ./src/index.ts",
-    "setup": "npm run build && node ./build/index.js setup",
+    "dev:http": "tsx ./src/http-bridge.ts",
+    "setup": "tsc && node ./build/index.js setup",
     "uninstall": "node ./build/index.js uninstall"
   },
   "files": [
