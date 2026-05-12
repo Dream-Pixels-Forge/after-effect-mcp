@@ -28,13 +28,13 @@ pnpm build
 Preview the client config changes before writing anything:
 
 ```powershell
-pnpm install:clients -- --dry-run --allowed-dir=D:\AI\DREAM-PIXELS-FORGE --afterfx-path="D:\Program Files\Adobe\Adobe After Effects 2025\Support Files\AfterFX.exe"
+pnpm install:clients -- --dry-run --allowed-dir="<projects-path>" --afterfx-path="<path-to-afterfx.exe>"
 ```
 
 Install the MCP config for supported local clients:
 
 ```powershell
-pnpm install:clients -- --allowed-dir=D:\AI\DREAM-PIXELS-FORGE --afterfx-path="D:\Program Files\Adobe\Adobe After Effects 2025\Support Files\AfterFX.exe"
+pnpm install:clients -- --allowed-dir="<projects-path>" --afterfx-path="<path-to-afterfx.exe>"
 ```
 
 The installer updates:
@@ -104,11 +104,11 @@ Add to your `opencode.jsonc`:
   "mcp": {
     "after_effects": {
       "type": "local",
-      "command": ["node", "D:\\AI\\DREAM-PIXELS-FORGE\\EXTENSIONS\\OPENCODE\\after-effect-mcp\\build\\index.js"],
+      "command": ["node", "<repo-path>\\build\\index.js"],
       "enabled": true,
       "environment": {
-        "MCP_ALLOWED_DIRS": "D:\\AI\\DREAM-PIXELS-FORGE",
-        "AFTERFX_PATH": "D:\\Program Files\\Adobe\\Adobe After Effects 2025\\Support Files\\AfterFX.exe"
+        "MCP_ALLOWED_DIRS": "<projects-path>",
+        "AFTERFX_PATH": "<path-to-afterfx.exe>"
       }
     }
   }
@@ -122,12 +122,12 @@ Add to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.after_effects]
 command = "node"
-args = ['D:\AI\DREAM-PIXELS-FORGE\EXTENSIONS\OPENCODE\after-effect-mcp\build\index.js']
+args = ['<repo-path>\build\index.js']
 enabled = true
 
 [mcp_servers.after_effects.env]
-MCP_ALLOWED_DIRS = 'D:\AI\DREAM-PIXELS-FORGE'
-AFTERFX_PATH = 'D:\Program Files\Adobe\Adobe After Effects 2025\Support Files\AfterFX.exe'
+MCP_ALLOWED_DIRS = '<projects-path>'
+AFTERFX_PATH = '<path-to-afterfx.exe>'
 ```
 
 ### Gemini and Qwen
@@ -140,11 +140,11 @@ Add this to `~/.gemini/settings.json` or `~/.qwen/settings.json`:
     "after-effects": {
       "command": "node",
       "args": [
-        "D:\\AI\\DREAM-PIXELS-FORGE\\EXTENSIONS\\OPENCODE\\after-effect-mcp\\build\\index.js"
+        "<repo-path>\\build\\index.js"
       ],
       "env": {
-        "MCP_ALLOWED_DIRS": "D:\\AI\\DREAM-PIXELS-FORGE",
-        "AFTERFX_PATH": "D:\\Program Files\\Adobe\\Adobe After Effects 2025\\Support Files\\AfterFX.exe"
+        "MCP_ALLOWED_DIRS": "<projects-path>",
+        "AFTERFX_PATH": "<path-to-afterfx.exe>"
       }
     }
   }
